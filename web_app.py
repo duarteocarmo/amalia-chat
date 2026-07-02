@@ -1,6 +1,8 @@
+import hashlib
 import json
 import logging
 import os
+import secrets
 import time
 from collections import defaultdict, deque
 from collections.abc import AsyncIterator
@@ -8,7 +10,7 @@ from pathlib import Path
 
 import httpx
 import weave
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
@@ -26,6 +28,8 @@ CONFIG = {
     "request_timeout_seconds": 120,
     "weave_project": "duarteocarmo/amalia-chat",
     "wandb_api_key_env_var": "WANDB_API_KEY",
+    "session_cookie_name": "amalia_session",
+    "session_cookie_max_age_seconds": 60 * 60 * 24 * 30,
 }
 
 if os.environ.get(CONFIG["wandb_api_key_env_var"]):
@@ -34,7 +38,7 @@ if os.environ.get(CONFIG["wandb_api_key_env_var"]):
 app = FastAPI(title="AMALIA Chat")
 request_log: dict[str, deque[float]] = defaultdict(deque)
 
-logger = logging.getLogger("amalia-chat")
+logger = logging.getLogger("uvicorn.error")
 
 
 class ChatMessage(BaseModel):
@@ -49,9 +53,21 @@ class ChatRequest(BaseModel):
 
 
 @app.get("/")
-async def index() -> HTMLResponse:
+async def index(request: Request) -> HTMLResponse:
     html = Path("web/index.html").read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
+    response = HTMLResponse(content=html)
+    if not session_id_from(request=request):
+        session_id = new_session_id()
+        set_session_cookie(
+            response=response,
+            request=request,
+            session_id=session_id,
+        )
+        logger.info(
+            "session_cookie_issued path=/ key=%s",
+            fingerprint_for(value=f"session:{session_id}"),
+        )
+    return response
 
 
 @app.get("/health")
@@ -63,11 +79,61 @@ async def health() -> dict[str, str]:
 async def chat_completions(
     request: Request, chat_request: ChatRequest
 ) -> StreamingResponse:
-    check_rate_limit(ip_address=ip_address_for(request=request))
+    rate_limit_key, session_id = rate_limit_key_for(request=request)
+    check_rate_limit(
+        rate_limit_key=rate_limit_key,
+        ip_address=ip_address_for(request=request),
+    )
     validate_chat_request(chat_request=chat_request)
-    return StreamingResponse(
+    response = StreamingResponse(
         content=stream_completion(chat_request=chat_request),
         media_type="text/event-stream",
+    )
+    if session_id:
+        set_session_cookie(response=response, request=request, session_id=session_id)
+        logger.info(
+            "session_cookie_issued path=/chat/completions key=%s",
+            fingerprint_for(value=f"session:{session_id}"),
+        )
+    return response
+
+
+def rate_limit_key_for(request: Request) -> tuple[str, str | None]:
+    session_id = session_id_from(request=request)
+    if session_id:
+        return f"session:{session_id}", None
+
+    session_id = new_session_id()
+    return f"session:{session_id}", session_id
+
+
+def session_id_from(request: Request) -> str | None:
+    session_id = request.cookies.get(CONFIG["session_cookie_name"])
+    if session_id and 20 <= len(session_id) <= 200:
+        return session_id
+    return None
+
+
+def new_session_id() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def set_session_cookie(response: Response, request: Request, session_id: str) -> None:
+    response.set_cookie(
+        key=CONFIG["session_cookie_name"],
+        value=session_id,
+        max_age=CONFIG["session_cookie_max_age_seconds"],
+        httponly=True,
+        secure=is_https_request(request=request),
+        samesite="lax",
+    )
+
+
+def is_https_request(request: Request) -> bool:
+    forwarded_proto = request.headers.get("x-forwarded-proto", "")
+    return (
+        request.url.scheme == "https"
+        or forwarded_proto.split(",")[0].strip() == "https"
     )
 
 
@@ -89,25 +155,44 @@ def ip_address_for(request: Request) -> str:
     return "unknown"
 
 
-def check_rate_limit(ip_address: str) -> None:
-    logger.info(
-        "rate_limit_check",
-        extra={"ip": ip_address, "bucket_size": len(request_log[ip_address])},
-    )
+def check_rate_limit(rate_limit_key: str, ip_address: str) -> None:
     now = time.time()
     cutoff = now - CONFIG["rate_limit_window_seconds"]
-    timestamps = request_log[ip_address]
+    timestamps = request_log[rate_limit_key]
 
+    expired_count = 0
     while timestamps and timestamps[0] < cutoff:
         timestamps.popleft()
+        expired_count += 1
 
+    key_fingerprint = fingerprint_for(value=rate_limit_key)
     if len(timestamps) >= CONFIG["request_limit"]:
+        logger.warning(
+            "rate_limit_blocked key=%s ip=%s bucket_size=%s limit=%s expired=%s",
+            key_fingerprint,
+            ip_address,
+            len(timestamps),
+            CONFIG["request_limit"],
+            expired_count,
+        )
         raise HTTPException(
             status_code=429,
             detail="Calma pá. Espera uma hora (429)",
         )
 
     timestamps.append(now)
+    logger.info(
+        "rate_limit_allowed key=%s ip=%s bucket_size=%s limit=%s expired=%s",
+        key_fingerprint,
+        ip_address,
+        len(timestamps),
+        CONFIG["request_limit"],
+        expired_count,
+    )
+
+
+def fingerprint_for(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()[:12]
 
 
 def validate_chat_request(chat_request: ChatRequest) -> None:
