@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import time
 from collections import defaultdict, deque
@@ -32,6 +33,8 @@ if os.environ.get(CONFIG["wandb_api_key_env_var"]):
 
 app = FastAPI(title="AMALIA Chat")
 request_log: dict[str, deque[float]] = defaultdict(deque)
+
+logger = logging.getLogger("amalia-chat")
 
 
 class ChatMessage(BaseModel):
@@ -87,6 +90,10 @@ def ip_address_for(request: Request) -> str:
 
 
 def check_rate_limit(ip_address: str) -> None:
+    logger.info(
+        "rate_limit_check",
+        extra={"ip": ip_address, "bucket_size": len(request_log[ip_address])},
+    )
     now = time.time()
     cutoff = now - CONFIG["rate_limit_window_seconds"]
     timestamps = request_log[ip_address]
