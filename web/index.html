@@ -50,12 +50,25 @@
         .message.user { justify-content: flex-end; }
         .message-content { white-space: pre-wrap; line-height: 1.6; max-width: 100%; }
         .message.assistant .message-content {
+            white-space: normal;
             padding: 0.5rem;
             margin-left: -0.5rem;
             cursor: pointer;
             border-radius: 0.5rem;
         }
         .message.assistant .message-content:hover { background-color: #f9fafb; }
+        /* Streamdown ships Tailwind classes we don't have; style its data-streamdown hooks instead */
+        .message-content [data-streamdown="strong"] { font-weight: 600; }
+        .message-content [data-streamdown="inline-code"],
+        .message-content [data-streamdown="code-block"] { font-family: Monaco, Menlo, Consolas, monospace; font-size: 0.875em; }
+        .message-content [data-streamdown="inline-code"] { background-color: #f3f4f6; border-radius: 0.25rem; padding: 0.1rem 0.35rem; }
+        .message-content [data-streamdown="code-block"] { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.75rem 1rem; margin: 0.75rem 0; overflow-x: auto; }
+        .message-content [data-streamdown="code-block-body"] code > span { display: block; }
+        .message-content [data-streamdown="table"] { border-collapse: collapse; }
+        .message-content [data-streamdown="table"] th,
+        .message-content [data-streamdown="table"] td { border: 1px solid #e5e7eb; padding: 0.4rem 0.75rem; }
+        .message-content [data-streamdown="link"] { background: none; border: 0; padding: 0; font: inherit; color: #2563eb; text-decoration: underline; cursor: pointer; }
+        .message-content [data-streamdown="blockquote"] { border-left: 3px solid #e5e7eb; margin: 0.75rem 0; padding-left: 1rem; color: #6b7280; }
         .message.user .message-content {
             background-color: #f3f4f6;
             border-radius: 1.25rem;
