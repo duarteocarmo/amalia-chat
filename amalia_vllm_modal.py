@@ -6,9 +6,9 @@ import modal
 
 CONFIG = {
     "app_name": "amalia-vllm-gguf-api",  # Modal app name.
-    "model_repo": "duarteocarmo/AMALIA-9B-0626-SFT-GGUF",  # Hugging Face GGUF repo.
+    "model_repo": "duarteocarmo/AMALIA-9B-0626-DPO-GGUF",  # Hugging Face GGUF repo.
     "model_quant": "Q4_K_M",  # GGUF quantization to serve.
-    "tokenizer": "amalia-llm/AMALIA-9B-0626-SFT",  # Base tokenizer/config for vLLM.
+    "tokenizer": "amalia-llm/AMALIA-9B-0626-DPO",  # Base tokenizer/config for vLLM.
     "served_model_name": "amalia",  # Model name exposed by the OpenAI-compatible API.
     "cuda_image": "nvidia/cuda:12.9.0-devel-ubuntu22.04",  # CUDA base image for Modal.
     "python_version": "3.12",  # Python version in the Modal image.
