@@ -15,7 +15,7 @@ CONFIG = {
     "api_url": "https://duarteocarmo--amalia-vllm-gguf-api-serve.modal.run",
     "api_key_env_var": "VLLM_API_KEY",
     "model": "amalia",
-    "request_limit": 60,
+    "request_limit": 100,
     "rate_limit_window_seconds": 60 * 60,
     "max_messages": 50,
     "max_message_chars": 8_000,
