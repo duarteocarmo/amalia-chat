@@ -1,12 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>AMALIA Chat</title>
     <script defer src="https://whale.duarteocarmo.com/script.js" data-website-id="fd279c48-9e51-46ec-9563-3e87f7ec7b09"></script>
     <style>
-        :root { color-scheme: light; }
+        :root {
+            color-scheme: light;
+            --page-bg: #ffffff;
+            --surface: #ffffff;
+            --surface-muted: #f9fafb;
+            --surface-raised: #f3f4f6;
+            --surface-hover: #e5e7eb;
+            --text: #111827;
+            --text-strong: #0d0d0d;
+            --muted: #6b7280;
+            --muted-light: #9ca3af;
+            --border: #e5e7eb;
+            --input-border: #d1d5db;
+            --primary: #111827;
+            --primary-hover: #2563eb;
+            --primary-text: #ffffff;
+            --focus-ring: rgba(37, 99, 235, 0.1);
+            --error-bg: #fee2e2;
+            --error-border: #fecaca;
+            --error-text: #b91c1c;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                color-scheme: dark;
+                --page-bg: #0b0f19;
+                --surface: #0b0f19;
+                --surface-muted: #1f2937;
+                --surface-raised: #263244;
+                --surface-hover: #374151;
+                --text: #e5e7eb;
+                --text-strong: #f9fafb;
+                --muted: #9ca3af;
+                --muted-light: #6b7280;
+                --border: #374151;
+                --input-border: #4b5563;
+                --primary: #e5e7eb;
+                --primary-hover: #60a5fa;
+                --primary-text: #0b0f19;
+                --focus-ring: rgba(96, 165, 250, 0.18);
+                --error-bg: #450a0a;
+                --error-border: #7f1d1d;
+                --error-text: #fecaca;
+            }
+        }
         * {
             box-sizing: border-box;
             font-family: inherit;
@@ -14,30 +57,67 @@
         html, body { height: 100%; margin: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, Adwaita Sans, Cantarell, Ubuntu, roboto, noto, helvetica, arial, sans-serif;
-            background-color: #ffffff;
-            color: #111827;
+            background-color: var(--page-bg);
+            color: var(--text);
             min-height: 100dvh;
             display: flex;
             flex-direction: column;
         }
-        .header { background-color: #ffffff; padding: 1.25rem 1.5rem; }
+        .header { background-color: var(--surface); padding: 1.25rem 1.5rem; }
         .header-left { display: flex; align-items: center; gap: 0.75rem; }
-        .header h1 { font-size: 1.25rem; font-weight: 600; margin: 0; color: #111827; }
+        .header h1 { font-size: 1.25rem; font-weight: 600; margin: 0; color: var(--text); }
         .new-conversation-btn {
             width: 32px;
             height: 32px;
             padding: 0;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border);
             border-radius: 0.5rem;
-            background-color: #ffffff;
-            color: #6b7280;
+            background-color: var(--surface);
+            color: var(--muted);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        .new-conversation-btn:hover { background-color: #f3f4f6; color: #374151; }
-        .chat-container { flex: 1; overflow-y: auto; background-color: #ffffff; }
+        .new-conversation-btn:hover { background-color: var(--surface-raised); color: var(--text); }
+        .notice-banner {
+            max-width: 48rem;
+            margin: -0.25rem auto 0.75rem;
+            padding: 0 1.5rem;
+            color: var(--muted);
+            font-size: 0.85rem;
+            line-height: 1.45;
+        }
+        .notice-banner.hidden { display: none; }
+        .notice-banner-inner {
+            position: relative;
+            padding: 0.75rem 2.25rem 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            background-color: var(--surface-muted);
+        }
+        .notice-banner a { color: inherit; text-decoration: underline; }
+        .notice-banner code {
+            font-family: Monaco, Menlo, Consolas, monospace;
+            font-size: 0.8rem;
+            overflow-wrap: anywhere;
+        }
+        .notice-close {
+            position: absolute;
+            top: 0.45rem;
+            right: 0.5rem;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 0;
+            border-radius: 999px;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+        .notice-close:hover { background-color: var(--surface-hover); color: var(--text); }
+        .chat-container { flex: 1; overflow-y: auto; background-color: var(--page-bg); }
         .chat-wrapper {
             max-width: 48rem;
             margin: 0 auto;
@@ -46,7 +126,7 @@
             flex-direction: column;
             gap: 0.75rem;
         }
-        .message { display: flex; justify-content: flex-start; margin-bottom: 0.5rem; color: #0d0d0d; }
+        .message { display: flex; justify-content: flex-start; margin-bottom: 0.5rem; color: var(--text-strong); }
         .message.user { justify-content: flex-end; }
         .message-content { white-space: pre-wrap; line-height: 1.6; max-width: 100%; }
         .message.assistant .message-content {
@@ -55,25 +135,25 @@
             cursor: pointer;
             border-radius: 0.5rem;
         }
-        .message.assistant .message-content:hover { background-color: #f9fafb; }
+        .message.assistant .message-content:hover { background-color: var(--surface-muted); }
         .message.user .message-content {
-            background-color: #f3f4f6;
+            background-color: var(--surface-raised);
             border-radius: 1.25rem;
             padding: 0.8rem 1rem;
             max-width: 65%;
             cursor: pointer;
         }
-        .message.user .message-content:hover { background-color: #e5e7eb; }
+        .message.user .message-content:hover { background-color: var(--surface-hover); }
         .message.console .message-content {
             font-family: Monaco, Menlo, Consolas, monospace;
             font-size: 0.875rem;
-            background-color: #fafafa;
+            background-color: var(--surface-muted);
             padding: 0.75rem 1rem;
-            color: #374151;
+            color: var(--text);
             max-width: 80%;
         }
         .input-container {
-            background-color: #ffffff;
+            background-color: var(--surface);
             padding: 1rem;
             padding-bottom: calc(1rem + env(safe-area-inset-bottom));
         }
@@ -87,7 +167,7 @@
         .model-details {
             max-width: 48rem;
             margin: 0.5rem auto 0;
-            color: #9ca3af;
+            color: var(--muted-light);
             font-size: 0.8rem;
             line-height: 1.4;
         }
@@ -95,10 +175,10 @@
         .chat-input {
             flex: 1;
             padding: 0.8rem 1rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--input-border);
             border-radius: 0.75rem;
-            background-color: #ffffff;
-            color: #111827;
+            background-color: var(--surface);
+            color: var(--text);
             font-size: 1rem;
             line-height: 1.5;
             resize: none;
@@ -106,52 +186,56 @@
             min-height: 54px;
             max-height: 200px;
         }
-        .chat-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .chat-input:focus { border-color: var(--primary-hover); box-shadow: 0 0 0 3px var(--focus-ring); }
         .send-button {
             flex-shrink: 0;
             padding: 0;
             width: 54px;
             height: 54px;
-            border: 1px solid #111827;
+            border: 1px solid var(--primary);
             border-radius: 0.75rem;
-            background-color: #111827;
-            color: #ffffff;
+            background-color: var(--primary);
+            color: var(--primary-text);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
         }
-        .send-button:hover:not(:disabled) { background-color: #2563eb; border-color: #2563eb; }
-        .send-button:disabled { cursor: not-allowed; border-color: #d1d5db; background-color: #e5e7eb; color: #9ca3af; }
-        .typing-indicator { display: inline-block; color: #6b7280; letter-spacing: 0.15em; }
+        .send-button:hover:not(:disabled) { background-color: var(--primary-hover); border-color: var(--primary-hover); }
+        .send-button:disabled { cursor: not-allowed; border-color: var(--input-border); background-color: var(--surface-hover); color: var(--muted-light); }
+        .typing-indicator { display: inline-block; color: var(--muted); letter-spacing: 0.15em; }
         .typing-indicator::after { content: '···'; animation: typing 1.4s infinite; }
         @keyframes typing { 0%, 60%, 100% { opacity: 0.2; } 30% { opacity: 1; } }
         .error-message {
-            background-color: #fee2e2;
-            border: 1px solid #fecaca;
-            color: #b91c1c;
+            background-color: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-text);
             padding: 0.75rem 1rem;
             border-radius: 0.75rem;
             margin-top: 0.5rem;
         }
-        @media (prefers-color-scheme: dark) {
-            :root { color-scheme: dark; }
-            html {
-                background: #000000;
-                filter: invert(1) hue-rotate(180deg);
-            }
+        @media (max-width: 640px) {
+            .notice-banner { font-size: 0.8rem; }
+            .message.user .message-content { max-width: 85%; }
         }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="header-left">
-            <button class="new-conversation-btn" onclick="newConversation()" title="New conversation">
+            <button class="new-conversation-btn" onclick="newConversation()" title="Nova conversa">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 5v14"></path><path d="M5 12h14"></path>
                 </svg>
             </button>
             <h1>amalia chat</h1>
+        </div>
+    </div>
+
+    <div class="notice-banner" id="noticeBanner">
+        <div class="notice-banner-inner">
+            <button class="notice-close" onclick="closeNoticeBanner()" aria-label="Fechar aviso" title="Fechar aviso">×</button>
+            Bem vindo/a. Este modelo esta correr com 15 USD de credito numa VM da Modal. Provavelmente vai morrer. Tu, que és hacker, usa <a href="https://github.com/ggml-org/llama.cpp" target="_blank" rel="noopener noreferrer">llama.cpp</a> e corre localmente com: <code>llama cli -hf duarteocarmo/AMALIA-9B-0626-SFT-GGUF:Q4_K_M</code>
         </div>
     </div>
 
@@ -174,12 +258,22 @@
     </div>
 
     <script>
+        const noticeBanner = document.getElementById('noticeBanner');
         const chatContainer = document.getElementById('chatContainer');
         const chatWrapper = document.getElementById('chatWrapper');
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
         let messages = [];
         let isGenerating = false;
+
+        if (localStorage.getItem('amalia_notice_closed') === '1') {
+            noticeBanner.classList.add('hidden');
+        }
+
+        function closeNoticeBanner() {
+            noticeBanner.classList.add('hidden');
+            localStorage.setItem('amalia_notice_closed', '1');
+        }
 
         chatInput.addEventListener('input', function() {
             this.style.height = 'auto';
@@ -212,14 +306,14 @@
             contentDiv.textContent = content;
 
             if (role === 'user' && messageIndex !== null) {
-                contentDiv.title = 'Click to edit and restart from here';
+                contentDiv.title = 'Clica para editar e recomeçar daqui';
                 contentDiv.addEventListener('click', function() {
                     if (!isGenerating) editMessage(messageIndex);
                 });
             }
 
             if (role === 'assistant' && messageIndex !== null) {
-                contentDiv.title = 'Click to regenerate this response';
+                contentDiv.title = 'Clica para gerar esta resposta novamente';
                 contentDiv.addEventListener('click', function() {
                     if (!isGenerating) regenerateMessage(messageIndex);
                 });
@@ -315,7 +409,7 @@
                 }
 
                 messages.push({ role: 'assistant', content: fullResponse });
-                assistantContent.title = 'Click to regenerate this response';
+                assistantContent.title = 'Clica para gerar esta resposta novamente';
                 assistantContent.addEventListener('click', function() {
                     if (!isGenerating) regenerateMessage(assistantMessageIndex);
                 });
