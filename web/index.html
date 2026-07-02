@@ -173,7 +173,20 @@
         </div>
     </div>
 
+    <script type="module">
+        import React from 'https://esm.sh/react@19.1.1';
+        import { createRoot } from 'https://esm.sh/react-dom@19.1.1/client';
+        import { Streamdown } from 'https://esm.sh/streamdown@2.5.0?deps=react@19.1.1,react-dom@19.1.1';
+
+        window.renderMarkdown = function(element, markdown) {
+            element._reactRoot ||= createRoot(element);
+            element._reactRoot.render(React.createElement(Streamdown, { controls: false }, markdown));
+        };
+    </script>
     <script>
+        // Fallback until the Streamdown module loads (or if the CDN is unreachable)
+        window.renderMarkdown ||= (element, markdown) => { element.textContent = markdown; };
+
         const chatContainer = document.getElementById('chatContainer');
         const chatWrapper = document.getElementById('chatWrapper');
         const chatInput = document.getElementById('chatInput');
@@ -308,7 +321,7 @@
                         if (data.error) throw new Error(data.error);
                         if (data.token) {
                             fullResponse += data.token;
-                            assistantContent.textContent = fullResponse;
+                            renderMarkdown(assistantContent, fullResponse);
                             chatContainer.scrollTop = chatContainer.scrollHeight;
                         }
                     }
