@@ -15,7 +15,7 @@ CONFIG = {
     "api_url": "https://duarteocarmo--amalia-vllm-gguf-api-serve.modal.run",
     "api_key_env_var": "VLLM_API_KEY",
     "model": "amalia",
-    "request_limit": 15,
+    "request_limit": 60,
     "rate_limit_window_seconds": 60 * 60,
     "max_messages": 50,
     "max_message_chars": 8_000,
@@ -69,9 +69,18 @@ async def chat_completions(
 
 
 def ip_address_for(request: Request) -> str:
+    cloudflare_ip = request.headers.get("cf-connecting-ip")
+    if cloudflare_ip:
+        return cloudflare_ip.strip()
+
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+
     forwarded_for = request.headers.get("x-forwarded-for")
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()
+
     if request.client:
         return request.client.host
     return "unknown"
