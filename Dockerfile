@@ -14,6 +14,6 @@ RUN uv sync --frozen --no-dev
 COPY web_app.py ./
 COPY web ./web
 
-EXPOSE 8080
+EXPOSE 7777
 
-CMD ["/app/.venv/bin/uvicorn", "web_app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["/app/.venv/bin/uvicorn", "web_app:app", "--host", "0.0.0.0", "--port", "7777"]
