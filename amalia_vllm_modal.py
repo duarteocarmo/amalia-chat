@@ -33,8 +33,8 @@ CONFIG = {
     "test_timeout_buffer_minutes": 1,  # Buffer subtracted from healthcheck timeout.
     "default_prompt": "Explica em português europeu o que é a aprendizagem automática.",  # Smoke test prompt.
     "temperature": 0.1,  # Sampling temperature for smoke test.
-    "top_p": 0.9,  # Nucleus sampling value for smoke test.
-    "max_tokens": 512,  # Max generated tokens for smoke test.
+    "top_p": 0.0,  # Nucleus sampling value for smoke test.
+    "max_tokens": 1024,  # Max generated tokens for smoke test.
     "host": "0.0.0.0",  # Host vLLM binds to inside the container.
     "uvicorn_log_level": "info",  # vLLM API server log level.
     "hf_xet_high_performance": "1",  # Faster Hugging Face model transfers.
