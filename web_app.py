@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 import httpx
+import weave
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
@@ -22,7 +23,12 @@ CONFIG = {
     "default_temperature": 0.7,
     "default_max_tokens": 512,
     "request_timeout_seconds": 120,
+    "weave_project": "duarteocarmo/amalia-chat",
+    "wandb_api_key_env_var": "WANDB_API_KEY",
 }
+
+if os.environ.get(CONFIG["wandb_api_key_env_var"]):
+    weave.init(CONFIG["weave_project"])
 
 app = FastAPI(title="AMALIA Chat")
 request_log: dict[str, deque[float]] = defaultdict(deque)
@@ -116,9 +122,15 @@ async def stream_completion(chat_request: ChatRequest) -> AsyncIterator[str]:
         yield sse_event(data={"error": "Server missing VLLM_API_KEY."})
         return
 
+    started_at = time.perf_counter()
+    response_text = ""
+    status = "success"
+    error = None
+    messages = [message.model_dump() for message in chat_request.messages]
+
     payload = {
         "model": CONFIG["model"],
-        "messages": [message.model_dump() for message in chat_request.messages],
+        "messages": messages,
         "stream": True,
         "temperature": chat_request.temperature or CONFIG["default_temperature"],
         "max_tokens": chat_request.max_tokens or CONFIG["default_max_tokens"],
@@ -129,35 +141,64 @@ async def stream_completion(chat_request: ChatRequest) -> AsyncIterator[str]:
     }
     timeout = httpx.Timeout(timeout=CONFIG["request_timeout_seconds"])
 
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        async with client.stream(
-            method="POST",
-            url=f"{CONFIG['api_url']}/v1/chat/completions",
-            headers=headers,
-            json=payload,
-        ) as response:
-            if response.status_code != 200:
-                text = await response.aread()
-                yield sse_event(
-                    data={
-                        "error": f"Upstream error {response.status_code}: {text.decode()}"
-                    }
-                )
-                return
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream(
+                method="POST",
+                url=f"{CONFIG['api_url']}/v1/chat/completions",
+                headers=headers,
+                json=payload,
+            ) as response:
+                if response.status_code != 200:
+                    text = await response.aread()
+                    status = "error"
+                    error = f"Upstream error {response.status_code}: {text.decode()}"
+                    yield sse_event(data={"error": error})
+                    return
 
-            async for line in response.aiter_lines():
-                if not line or line == "data: [DONE]":
-                    continue
-                if not line.startswith("data: "):
-                    continue
+                async for line in response.aiter_lines():
+                    if not line or line == "data: [DONE]":
+                        continue
+                    if not line.startswith("data: "):
+                        continue
 
-                chunk = json.loads(line[len("data: ") :])
-                delta = chunk["choices"][0]["delta"]
-                token = delta.get("content")
-                if token:
-                    yield sse_event(data={"token": token})
+                    chunk = json.loads(line[len("data: ") :])
+                    delta = chunk["choices"][0]["delta"]
+                    token = delta.get("content")
+                    if token:
+                        response_text += token
+                        yield sse_event(data={"token": token})
 
-    yield sse_event(data={"done": True})
+        yield sse_event(data={"done": True})
+    except Exception as exc:
+        status = "error"
+        error = str(exc)
+        raise
+    finally:
+        trace_conversation(
+            messages=messages,
+            response=response_text,
+            latency_seconds=round(time.perf_counter() - started_at, 4),
+            status=status,
+            error=error,
+        )
+
+
+@weave.op(name="chat_conversation", kind="llm")
+def trace_conversation(
+    messages: list[dict[str, str]],
+    response: str,
+    latency_seconds: float,
+    status: str,
+    error: str | None,
+) -> dict:
+    return {
+        "messages": messages,
+        "response": response,
+        "latency_seconds": latency_seconds,
+        "status": status,
+        "error": error,
+    }
 
 
 def sse_event(data: dict) -> str:
